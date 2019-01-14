@@ -157,7 +157,7 @@ function drawChart(data, width, height) {
 		})
 
 	var valueline = d3.line()
-		//.curve(d3.curveCatmullRomOpen)
+		.curve(d3.curveCardinal)
 		.x(function(d) { return x(d.week); })
 		.y(function(d) { return y(d.standing); });	
 
