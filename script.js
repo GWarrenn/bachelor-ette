@@ -3,8 +3,6 @@ document.getElementById("datetime").innerHTML = dt.toLocaleString();
 
 function drawChart(data, width, height) {
 
-	var activeTeam;
-	console.log(activeTeam)
 	var dullOpacity = 0.1;
 	var brightOpacity = 0.3;
 	var transitionDuration = 1000;
@@ -37,7 +35,7 @@ function drawChart(data, width, height) {
 		.range([margin.left , width - margin.right])
 		.domain([1,7]);
 
-	num_rows = main_data.filter(function(d) { return d.week == "7" }).length	
+	num_rows = main_data.filter(function(d) { return d.week == "1" }).length	
 
 	// position
 	var y = d3.scaleLinear()
@@ -98,7 +96,7 @@ function drawChart(data, width, height) {
 		.data(data)
 		.enter()
 		.filter(function(d) {
-			return d.week == "7"
+			return d.week == most_recent_week
 		})
 		.append("text")
 		.attr("class", "text")
@@ -182,17 +180,6 @@ function drawChart(data, width, height) {
 				return valueline(d.values)
 			});	
 
-//				chart.append("path")
-//					.data(data)
-//					.attr("class", "line")
-//					//.style("stroke", "curveCatmullRom")
-//					.attr("id", 'trend-line') 
-//					.attr("d", d3.line()
-//							.curve(d3.curveCatmullRom)
-//							.x(function(d) { return x(d.week); })
-//							.y(function(d) { return y(d.standing); })
-//						);
-
 	function showTooltip(d) {
 		var tooltipWidth = d.Name.length * 11;
 		
@@ -264,109 +251,7 @@ function drawChart(data, width, height) {
 		  .attr('width', 0)
 		  .attr('height', 0);
 		chart.select('.tooltip').transition().delay(transitionDuration/2).remove();
-	}
-////
-//				function update() {
-//					chart.selectAll('circle')
-//					  .transition()
-//					  .duration(transitionDuration)
-//					  .style('opacity', brightOpacity);
-//
-//					if (!activeTeam) {
-//						console.log('this')
-//					  chart.selectAll('.position-line')
-//					    .transition()
-//					    .duration(transitionDuration)
-//					    .style('opacity', 0)
-//					    .remove();
-//
-//					  chart.selectAll('.team-label')
-//					    .transition()
-//					    .duration(transitionDuration)
-//					    .attr('transform', 'translate(25, ' + (height + 100) + ') rotate(-90)')
-//					    .remove();
-//					}
-//
-//					if (activeTeam) {
-//					  var teamNest = nestData.filter(function(d) { return d.key === activeTeam })[0];
-//					  var weeklyOpponents = teamNest.values.map(function(d) { return d.opponent; });
-//					  // dull other teams except in first last columns
-//					  chart.selectAll('circle')
-//					    .transition()
-//					    .duration(transitionDuration)
-//					    .style('opacity', 1);
-//
-//					var pl = chart.select('.position-line');
-//					  
-//					if (chart.select('.position-line').size() < 1) {
-//					    pl = chart.append('path')
-//					      .attr('class', 'position-line');
-//					  }
-//
-//				  	// draw position line
-//					pl.transition()
-//						.duration(transitionDuration)
-//						.attr('stroke', 'black')
-//						.attr('d', function(argument) {
-//							return positionLine(teamNest.values);
-//						});
-//				};
-//
-//
-//
-////				// draw table icons
-////				char.selectAll('.circle')
-////					.data(function(d, i) { return data[i]; })
-////					.enter()
-////					.append('circle')
-////					//.attr('class', 'team-image')
-////					.attr('x', function(d) { return x(d.week); })
-////					.attr('y', function(d) { return y(d.standing); })
-////					.attr('transform', 'translate(-8, -8)')
-////					//.attr('xlink:href', function(d) {
-////					//  return colorsAndImages[d.Name].icon;
-////					//})
-////					//.on('click', function(d) {
-////					//  if (activeTeam === d.Name) {
-////					//    activeTeam = null;
-////					//  } else if (activeTeam !== d.Name) {
-////					//    activeTeam = d.Name;
-////					//  }
-////					//  update();
-////					//})
-////					.transition()
-////					.duration(transitionDuration)
-////					.attr('width', 16)
-////					.attr('height', 16);
-////
-////				// draw intial and final team positions
-//				var finalTeamPositions = data.filter(function(d) { return d.week === 1 });
-//				
-//				chart.selectAll('.team-final')
-//					.data(finalTeamPositions)
-//					.enter()
-//					.append('image')
-//					.attr('class', 'team-final')
-//					.attr('x', width + 10)
-//					.attr('y', function(d) { return y(d.standing); })
-//					.attr('transform', 'translate(-8, -8)')
-//					.attr('width', 16)
-//					.attr('height', 16)
-//					//.attr('xlink:href', function(d) {
-//					//  return colorsAndImages[d.Name].icon;
-//					//})
-//					.on('click', function(d) {
-//					  if (activeTeam === d.Name) {
-//					    activeTeam = null;
-//					  } else if (activeTeam !== d.Name) {
-//					    activeTeam = d.Name;
-//					  }
-//					  update();
-//					})
-//					.transition()
-//					.duration(transitionDuration)
-//					.attr('x', width - 20);
-//				}		
+	}		
 }
 
 //load data from google sheet doc
@@ -381,7 +266,7 @@ window.addEventListener('load', function() {
 
 	function draw(data, tabletop) {
 
-		results = tabletop.sheets("old standings")
+		results = tabletop.sheets("STANDINGS")
 		main_data = results.elements
 
 		var chartEl = document.querySelector('#chart');
