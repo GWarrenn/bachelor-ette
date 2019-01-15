@@ -25,7 +25,7 @@ function drawChart(data, width, height) {
 	teams = data.map(function(d) { return d.Name});
 
 	most_recent_week = Math.max(...weeks)
-	most_recent_week_result = main_data.filter(function(d) { return d.week == most_recent_week })
+	most_recent_week_result = data.filter(function(d) { return d.week == most_recent_week })
 	current_leader = most_recent_week_result[0].Name
 
 	document.getElementById("current_leader").innerHTML = "Current Leader (as of week " + most_recent_week + ")" + ": <b>" + current_leader + "</b>"
