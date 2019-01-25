@@ -21,12 +21,36 @@ function drawChart(data, width, height) {
 		.attr('width', width)
 		.attr('height', height);
 
-	weeks = d3.map(data, function(d) { return d.week; }).keys().map(function(d) { return Number(d); });	
-	teams = data.map(function(d) { return d.Name});
+	temp_data = data
+
+	weeks = d3.map(temp_data, function(d) { return d.week; }).keys().map(function(d) { return Number(d); });	
+	teams = temp_data.map(function(d) { return d.Name});
 
 	most_recent_week = Math.max(...weeks)
-	most_recent_week_result = data.filter(function(d) { return d.week == most_recent_week })
+	most_recent_week_result = temp_data.filter(function(d) { return d.week == most_recent_week })
 	current_leader = most_recent_week_result[0].Name
+
+	prev_week = most_recent_week - 1
+	prev_week_data = temp_data.filter(function(d) { return d.week == prev_week })
+
+	//prev_week_data = prev_week_data.map(function(a) {
+	//	a.prev_week_standing = a.standing;
+	//	a.prev_week = a.week;
+	//});	
+
+	change = _(prev_week_data) // start sequence
+		.keyBy('Name') // create a dictionary of the 1st array
+		.mergeWith(_.keyBy(most_recent_week_result, 'Name')) // create a dictionary of the 2nd array, and merge it to the 1st
+		.values() // turn the combined dictionary to array
+		//.value() 
+
+	//change_in_time = _.map(prev_week_data, function(obj) {
+	//					return _.assign(obj, _.find(most_recent_week_result, {
+	//						Name : obj.Name 
+	//					}));
+	//				});
+
+	console.log(data)
 
 	document.getElementById("current_leader").innerHTML = "Current Leader (as of week " + most_recent_week + ")" + ": <b>" + current_leader + "</b>"
 
@@ -35,7 +59,7 @@ function drawChart(data, width, height) {
 		.range([margin.left , width - margin.right])
 		.domain([1,7]);
 
-	num_rows = main_data.filter(function(d) { return d.week == "1" }).length	
+	num_rows = data.filter(function(d) { return d.week == "1" }).length	
 
 	// position
 	var y = d3.scaleLinear()
@@ -118,6 +142,9 @@ function drawChart(data, width, height) {
 				.filter(function(d) { 
 					return d.key == type.Name; })
 				.style("opacity", 1);
+
+			showTooltip(type)
+
 		})	
 		.on("click", function(type) {
 			d3.selectAll(".text")
@@ -136,22 +163,9 @@ function drawChart(data, width, height) {
 			d3.selectAll("circle")
 				.style("opacity", 1);		
 			d3.selectAll(".line")
-				.style("opacity", 1);			
-		})
+				.style("opacity", 1);
 
-	chart.selectAll(".dot")
-        .data(data)
-        .enter()
-        .append("circle")
-        .attr("class", "dot")
-        .attr("cx", function (d) { return x(d.week); })
-        .attr("cy", function (d) { return y(d.standing); })
-        .attr("r", 5)
-		.on("mouseover", function(d) {		
-			showTooltip(d)
-		})					
-		.on("mouseout", function(d) {		
-			hideTooltip(d)	
+			hideTooltip(type)				
 		})
 
 	var valueline = d3.line()
@@ -180,8 +194,23 @@ function drawChart(data, width, height) {
 				return valueline(d.values)
 			});	
 
+	chart.selectAll(".dot")
+        .data(data)
+        .enter()
+        .append("circle")
+        .attr("class", "dot")
+        .attr("cx", function (d) { return x(d.week); })
+        .attr("cy", function (d) { return y(d.standing); })
+        .attr("r", 5)
+		.on("mouseover", function(d) {		
+			showTooltip(d)
+		})					
+		.on("mouseout", function(d) {		
+			hideTooltip(d)	
+		})		
+
 	function showTooltip(d) {
-		var tooltipWidth = d.Name.length * 11;
+		var tooltipWidth = d.Name.length * 12;
 		
 		var tooltip = chart.append('g')
 		  .attr('class', 'tooltip');
