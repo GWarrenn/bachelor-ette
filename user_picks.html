@@ -21,6 +21,19 @@
 		font-weight: bold;
 	}
 
+.row:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.column {
+  float: left;
+  width: 50%;
+  padding: 0px;
+  font-family: Franklin Gothic Medium
+}
+
 
 </style>
 
@@ -33,10 +46,19 @@
 </head>
 	<body>
 
-		<p align="center"> Select Name: <select align="center" id='nameDropdown'></select></p>
-		<div id='name' align="center"></div>
+	<div class="row">
+		<div class="column" align='center'>
+			<p align="center"> Select Name: <select align="center" id='nameDropdown'></select></p>
+			<div id='name' align="center"></div>
+			<div id="bach-picks-table" align="center"></div>
+		</div>
+		<div class="column" align='center'>
+			<p align="center"> Select Name: <select align="center" id='nameDropdown'></select></p>
+			<div id='name' align="center"></div>
+			<div id="bach-picks-table" align="center"></div>
+		</div>  
+	</div>
 
-		<div id="bach-picks-table" align="center"></div>
 		<script type="text/javascript" src="user_picks.js"></script>
 
 	</body>

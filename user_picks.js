@@ -8,27 +8,24 @@ function renderSpreadsheetData() {
 
 function draw(data, tabletop) {
 
-	results = tabletop.sheets("Sheet1")
+	results = tabletop.sheets("picks")
 	main_data = results.elements
 
-	console.log(main_data)
+	weekly_results = tabletop.sheets("weekly results")
+	rose_order = weekly_results.elements
 
-	UserPicks(main_data)
-}
+	var max = _.maxBy(rose_order, function(o) {
+					return o.week;
+			})
 
-renderSpreadsheetData();
+	most_recent_rose_order = rose_order.filter(function (a) {
+		return a.week == max.week ;
+	});
 
-contestants = ["Ben G.","Brian B.","Cameron A.","Chasen C.","Connor J.","Connor S.","Daron B.","Devin H.",
-"Dustin K.","Dylan B.","Garrett P.","Grant E.","Hunter J.","Jed W.","Joe B.","Joe R.",
-"Joey J.","John Paul J.","Jonathan S.","Kevin F.","Luke P.","Luke S.","Matt D.","Matt D. (2)",
-"Matt S.","Matteo V.","Mike J.","Peter W.","Ryan S.","Scott A.","Thomas S.","Tyler C.","Tyler G."]
-
-function UserPicks(data) {
-	
 	//reshaping our wide data to long
 
 	long_data = [];
-	data.forEach( function(row) {
+	main_data.forEach( function(row) {
 		// Loop through all of the columns, and for each column
 		// make a new row
 		Object.keys(row).forEach( function(colname) {
@@ -45,6 +42,95 @@ function UserPicks(data) {
 	long_data.forEach( function(n) {
 		n.pick_rank = +n.pick_rank	
 	})	
+
+	roses_and_picks = _.map(long_data, function(obj) {
+		return _.assign(obj, _.find(most_recent_rose_order, {
+			name : obj.pick_name
+		}));
+	});
+
+	roses_and_picks.forEach(function(d){
+		d.rose_order = +d.rose_order
+	})
+
+	UserPicks(roses_and_picks)
+	calculateScores(roses_and_picks)
+}
+
+renderSpreadsheetData();
+
+contestants = ["Ben G.","Brian B.","Cameron A.","Chasen C.","Connor J.","Connor S.","Daron B.","Devin H.",
+"Dustin K.","Dylan B.","Garrett P.","Grant E.","Hunter J.","Jed W.","Joe B.","Joe R.",
+"Joey J.","John Paul J.","Jonathan S.","Kevin F.","Luke P.","Luke S.","Matt D.","Matt D. (2)",
+"Matt S.","Matteo V.","Mike J.","Peter W.","Ryan S.","Scott A.","Thomas S.","Tyler C.","Tyler G."]
+
+function calculateScores(picks,roses){
+
+	function pearsonCorrelation(independent, dependent) {
+	    // covariance
+	    let independent_mean = arithmeticMean(independent);
+	    let dependent_mean = arithmeticMean(dependent);
+	    let products_mean = meanOfProducts(independent, dependent);
+	    let covariance = products_mean - (independent_mean * dependent_mean);
+
+	    // standard deviations of independent values
+	    let independent_standard_deviation = standardDeviation(independent);
+
+	    // standard deviations of dependent values
+	    let dependent_standard_deviation = standardDeviation(dependent);
+
+	    // Pearson Correlation Coefficient
+	    let rho = covariance / (independent_standard_deviation * dependent_standard_deviation);
+
+    	return rho;
+	}
+	function arithmeticMean(data) {
+		let total = 0;
+
+		// note that incrementing total is done within the for loop
+		for(let i = 0, l = data.length; i < l; total += data[i], i++);
+
+		return total / data.length;
+	}
+
+
+	function meanOfProducts(data1, data2){
+		let total = 0;
+
+		// note that incrementing total is done within the for loop
+		for(let i = 0, l = data1.length; i < l; total += (data1[i] * data2[i]), i++);
+
+		return total / data1.length;
+	}
+
+
+	function standardDeviation(data){
+		let squares = [];
+
+		for(let i = 0, l = data.length; i < l; i++){
+	    	squares[i] = Math.pow(data[i], 2);
+		}
+
+		let mean_of_squares = arithmeticMean(squares);
+		let mean = arithmeticMean(data);
+		let square_of_mean = Math.pow(mean, 2);
+		let variance = mean_of_squares - square_of_mean;
+		let std_dev = Math.sqrt(variance);
+
+		return std_dev;
+	}
+
+	weekly_scores = _(roses_and_picks)
+		.groupBy('pick_name')
+		.map((pick_name, id) => ({
+			pick_name: id,
+			correlation : standardDeviation('pick_rank'),
+		}))
+		.value()
+
+}
+
+function UserPicks(data) {
 
 	list = _.uniqBy(long_data, function (e) {
 		return e.Name;
@@ -135,6 +221,12 @@ function UserPicks(data) {
 
 		rows.exit().remove();
 
+		eliminated = filtered_data.filter(function (a) { return a.eliminated == "1" ; });		
+
+		var color = d3.scaleOrdinal()
+		    .domain(eliminated)
+		    .range("#FF0000", "#FF0000");
+
 		// create a cell in each row for each column
 		cells = rows.selectAll('td')
 			.data(function (row) {
@@ -144,6 +236,7 @@ function UserPicks(data) {
 			})
 			.enter()
 			.append('td')
+			.style("background-color", function(d){ if(d.column == "pick_name") return color(d.value);})
 			.text(function (d) { return d.value; });
 
 		cells.exit().remove();
