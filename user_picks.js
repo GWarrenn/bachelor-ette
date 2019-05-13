@@ -7,6 +7,7 @@ function renderSpreadsheetData() {
 }
 
 function draw(data, tabletop) {
+	console
 
 	results = tabletop.sheets("picks")
 	main_data = results.elements
@@ -54,81 +55,21 @@ function draw(data, tabletop) {
 	})
 
 	UserPicks(roses_and_picks)
-	calculateScores(roses_and_picks)
+
+	rankings_over_time = tabletop.sheets("weekly rankings")
+	ranking_data = rankings_over_time.elements
+
+	//var chartEl = document.querySelector('#chart');
+	//var rect = chartEl.getBoundingClientRect();
+	//document.querySelector('.loading').style.display = 'none';
+	//drawChart(ranking_data, rect.width, rect.height);	
 }
 
 renderSpreadsheetData();
 
-contestants = ["Ben G.","Brian B.","Cameron A.","Chasen C.","Connor J.","Connor S.","Daron B.","Devin H.",
-"Dustin K.","Dylan B.","Garrett P.","Grant E.","Hunter J.","Jed W.","Joe B.","Joe R.",
-"Joey J.","John Paul J.","Jonathan S.","Kevin F.","Luke P.","Luke S.","Matt D.","Matt D. (2)",
-"Matt S.","Matteo V.","Mike J.","Peter W.","Ryan S.","Scott A.","Thomas S.","Tyler C.","Tyler G."]
-
-function calculateScores(picks,roses){
-
-	function pearsonCorrelation(independent, dependent) {
-	    // covariance
-	    let independent_mean = arithmeticMean(independent);
-	    let dependent_mean = arithmeticMean(dependent);
-	    let products_mean = meanOfProducts(independent, dependent);
-	    let covariance = products_mean - (independent_mean * dependent_mean);
-
-	    // standard deviations of independent values
-	    let independent_standard_deviation = standardDeviation(independent);
-
-	    // standard deviations of dependent values
-	    let dependent_standard_deviation = standardDeviation(dependent);
-
-	    // Pearson Correlation Coefficient
-	    let rho = covariance / (independent_standard_deviation * dependent_standard_deviation);
-
-    	return rho;
-	}
-	function arithmeticMean(data) {
-		let total = 0;
-
-		// note that incrementing total is done within the for loop
-		for(let i = 0, l = data.length; i < l; total += data[i], i++);
-
-		return total / data.length;
-	}
-
-
-	function meanOfProducts(data1, data2){
-		let total = 0;
-
-		// note that incrementing total is done within the for loop
-		for(let i = 0, l = data1.length; i < l; total += (data1[i] * data2[i]), i++);
-
-		return total / data1.length;
-	}
-
-
-	function standardDeviation(data){
-		let squares = [];
-
-		for(let i = 0, l = data.length; i < l; i++){
-	    	squares[i] = Math.pow(data[i], 2);
-		}
-
-		let mean_of_squares = arithmeticMean(squares);
-		let mean = arithmeticMean(data);
-		let square_of_mean = Math.pow(mean, 2);
-		let variance = mean_of_squares - square_of_mean;
-		let std_dev = Math.sqrt(variance);
-
-		return std_dev;
-	}
-
-	weekly_scores = _(roses_and_picks)
-		.groupBy('pick_name')
-		.map((pick_name, id) => ({
-			pick_name: id,
-			correlation : standardDeviation('pick_rank'),
-		}))
-		.value()
-
-}
+contestants = ["Brian","Cam","Chasen","Connor J.","Connor S.","Daron","Devin","Dustin","Dylan","Garrett","Grant",
+				"Hunter","Jed","Joe","Joey J.","John Paul Jones","Jonathan","Kevin","Luke P.","Luke S.","Matt Donald",
+				"Matteo","Matthew","Mike","Peter","Ryan","Scott","Thomas","Tyler C.","Tyler G."]
 
 function UserPicks(data) {
 
@@ -136,7 +77,7 @@ function UserPicks(data) {
 		return e.Name;
 	});
 
-	var names = _.map(list, 'Name');
+	var names = _.map(list, 'Name').sort();
 
 	var dropDown = d3.select('#nameDropdown')
 
@@ -201,7 +142,7 @@ function UserPicks(data) {
 
 		merged_data = _.orderBy(merged_data, ['pick_rank'], ['asc']);
 
-		display_cols = ['Contestant Name','Contestant Rank','Avg. Contestant Rank¹']
+		display_cols = ['Contestant Name','Contestant Rank','Avg. Contestant Rank']
 		columns = ['pick_name','pick_rank','adjusted_rank']
 
 		filtered_data = merged_data.filter(function (a) { return a.Name == filter_param ; });		
@@ -243,12 +184,292 @@ function UserPicks(data) {
 
 	}	
 
-	temp_filter = 'Test 01'
+	temp_filter = 'Age Order'
 
 	updateTable(merged_data,temp_filter)
 
 	console.log(avg_ranks)
 }
 
+function drawChart(data, width, height) {
 
+	var dullOpacity = 0.1;
+	var brightOpacity = 0.3;
+	var transitionDuration = 1000;
+
+	var margin = {
+		top: 50,
+		left: 50,
+		right: 75,
+		bottom: 50
+	};
+
+	width = 1000 - margin.left - margin.right,
+	height = 1500 - margin.top - margin.bottom;
+
+	var chart = d3.select('#chart')
+		.attr('width', width)
+		.attr('height', height);
+
+	temp_data = data
+
+	weeks = d3.map(temp_data, function(d) { return d.week; }).keys().map(function(d) { return Number(d); });	
+	teams = temp_data.map(function(d) { return d.Name});
+
+	most_recent_week = Math.max(...weeks)
+	most_recent_week_result = temp_data.filter(function(d) { return d.week == most_recent_week })
+	current_leader = most_recent_week_result[0].Name
+
+	prev_week = most_recent_week - 1
+	prev_week_data = temp_data.filter(function(d) { return d.week == prev_week })
+
+	//prev_week_data = prev_week_data.map(function(a) {
+	//	a.prev_week_standing = a.standing;
+	//	a.prev_week = a.week;
+	//});	
+
+	change = _(prev_week_data) // start sequence
+		.keyBy('Name') // create a dictionary of the 1st array
+		.mergeWith(_.keyBy(most_recent_week_result, 'Name')) // create a dictionary of the 2nd array, and merge it to the 1st
+		.values() // turn the combined dictionary to array
+		//.value() 
+
+	//change_in_time = _.map(prev_week_data, function(obj) {
+	//					return _.assign(obj, _.find(most_recent_week_result, {
+	//						Name : obj.Name 
+	//					}));
+	//				});
+
+	console.log(data)
+
+	document.getElementById("current_leader").innerHTML = "Current Leader (as of week " + most_recent_week + ")" + ": <b>" + current_leader + "</b>"
+
+	// week
+	var x = d3.scaleLinear()
+		.range([margin.left , width - margin.right])
+		.domain([1,9]);
+
+	num_rows = data.filter(function(d) { return d.week == "1" }).length	
+
+	// position
+	var y = d3.scaleLinear()
+		.range([margin.top, height - margin.bottom])
+		.domain([1, num_rows]);
+
+	var y2 = d3.scaleBand()
+		.range([margin.top, height - margin.bottom])
+
+	var xAxis = d3.axisTop()
+		.ticks(weeks.length)
+		.tickFormat(function(d) { return 'Week ' + d })
+		.scale(x);
+
+	var yAxis = d3.axisLeft()
+		.ticks(10)
+		.scale(y);
+
+	var yAxisRight = d3.axisRight()
+		//.tickFormat(data.map(function(d) { return d.Name}))
+		//.ticks(65)
+		.scale(y2);	
+	
+	//y2.domain(data.map(function(d) { return d.Name}))
+
+	// show weeks
+	chart.append('g')
+		.attr('class', 'axis x-axis')
+		.transition()
+		.duration(transitionDuration)
+		.attr('transform', 'translate(0,' + ((margin.top/2) - 5) + ')')
+		.call(xAxis)
+		.selectAll('text')
+		.attr('dy', 2)
+
+	// show position
+	chart.append('g')
+		.attr('class', 'axis y-axis')
+		.attr('transform', 'translate(' + x(.75) + ', 0)')
+		.transition()
+		.duration(transitionDuration)
+		.call(yAxis)
+	
+	chart.append('text')
+		//.attr("x", 15)
+		.attr("y", 15)
+		.attr("transform", "rotate(-90)")
+		.attr("fill", "#000")
+		.text("Standing");
+
+	chart.append("g")				
+		.attr('class', 'axis y-axis')
+		.attr("id", "yaxis")
+		.attr("transform", "translate(" + (width - 70) + " ,0)")
+		.call(yAxisRight)
+
+	chart.selectAll(".text")
+		.data(data)
+		.enter()
+		.filter(function(d) {
+			return d.week == most_recent_week
+		})
+		.append("text")
+		.attr("class", "text")
+		.attr("x", 810)
+		.attr("y", function(d) { return y(d.standing) + 5 ; })
+		.text(function(d) { return d.Name;})
+		.on("mouseover", function(type) {
+			d3.selectAll(".text")
+				.style("opacity", 0.1);
+			d3.select(this)
+				.style("opacity", 1);
+			d3.selectAll(".dot")
+				.style("opacity", 0.1)
+				.filter(function(d) { 
+					return d.Name == type.Name; })
+				.style("opacity", 1);
+			d3.selectAll(".line")
+				.style("opacity", 0.1)
+				.filter(function(d) { 
+					return d.key == type.Name; })
+				.style("opacity", 1);
+
+			showTooltip(type)
+
+		})	
+		.on("click", function(type) {
+			d3.selectAll(".text")
+				.style("opacity", 0.1);
+			d3.select(this)
+				.style("opacity", 1);
+			d3.selectAll(".dot")
+				.style("opacity", 0.1)
+				.filter(function(d) { 
+					return d.Name == type.Name; })
+				.style("opacity", 1);
+		})	
+		.on("mouseout", function(type) {
+			d3.selectAll(".text")
+				.style("opacity", 1);
+			d3.selectAll("circle")
+				.style("opacity", 1);		
+			d3.selectAll(".line")
+				.style("opacity", 1);
+
+			hideTooltip(type)				
+		})
+
+	var valueline = d3.line()
+		.curve(d3.curveCardinal)
+		.x(function(d) { return x(d.week); })
+		.y(function(d) { return y(d.standing); });	
+
+	data.forEach(function(d) {
+		d.standing = +d.standing;
+		d.week = d.week;
+	});
+
+	nest = d3.nest()
+		.key(function(d){
+			return d.Name;
+		})
+		.entries(data)
+
+	chart.selectAll(".line")
+		.data(nest)
+		.enter()
+		.append("path")
+		.attr("class", "line")
+		.style("opacity", 0.75)
+		.attr("d", function(d){
+				return valueline(d.values)
+			});	
+
+	chart.selectAll(".dot")
+        .data(data)
+        .enter()
+        .append("circle")
+        .attr("class", "dot")
+        .attr("cx", function (d) { return x(d.week); })
+        .attr("cy", function (d) { return y(d.standing); })
+        .attr("r", 5)
+		.on("mouseover", function(d) {		
+			showTooltip(d)
+		})					
+		.on("mouseout", function(d) {		
+			hideTooltip(d)	
+		})		
+
+	function showTooltip(d) {
+		var tooltipWidth = d.Name.length * 12;
+		
+		var tooltip = chart.append('g')
+		  .attr('class', 'tooltip');
+		
+		var tooltipRect = tooltip.append('rect')
+		  .attr('width', 0)
+		  .attr('height', 60)
+		  .attr('fill', 'black')
+		  .attr('rx', 3)
+		  .attr('ry', 3)
+		  .style('opacity', 0)
+		  .attr('x', x(d.week))
+		  .attr('y', y(d.standing) - 30)
+		  .transition()
+		  .duration(transitionDuration/2)
+		  .style('opacity', 0.5)
+		  .attr('width', tooltipWidth)
+		  .attr('y', y(d.standing) - 60);
+		
+		var tooltipName = tooltip.append('text')
+		  .attr('fill', 'white')
+		  .style('opacity', 0)
+		  .attr('x', x(d.week) + 5)
+		  .attr('y', y(d.standing) - 20)
+		  .transition()
+		  .duration(transitionDuration/2)
+		  .style('opacity', 1)
+		  .attr('y', y(d.standing) - 42)
+		  .text("Name: " + d.Name);
+
+		var tooltipScore = tooltip.append('text')
+		  .attr('fill', 'white')
+		  .style('opacity', 0)
+		  .attr('x', x(d.week) + 5)
+		  .attr('y', y(d.standing) - 20)
+		  .transition()
+		  .duration(transitionDuration/2)
+		  .style('opacity', 1)
+		  .attr('y', y(d.standing) - 28)
+		  .text("Score: "  + d.Score);
+
+		var tooltipStanding = tooltip.append('text')
+		  .attr('fill', 'white')
+		  .style('opacity', 0)
+		  .attr('x', x(d.week) + 5)
+		  .attr('y', y(d.standing) - 20)
+		  .transition()
+		  .duration(transitionDuration/2)
+		  .style('opacity', 1)
+		  .attr('y', y(d.standing) - 14)
+		  .text("Rank: "  + d.standing);
+
+	}
+
+	function hideTooltip(d) {
+		chart.selectAll('.tooltip text')
+		  .transition()
+		  .duration(transitionDuration/2)
+		  .style('opacity', 0);
+		chart.selectAll('.tooltip rect')
+		  .transition()
+		  .duration(transitionDuration/2)
+		  .style('opacity', 0)
+		  .attr('y', function() {
+		    return +d3.select(this).attr('y') + 40;
+		  })
+		  .attr('width', 0)
+		  .attr('height', 0);
+		chart.select('.tooltip').transition().delay(transitionDuration/2).remove();
+	}		
+}
 
