@@ -486,6 +486,10 @@ var color = d3.scaleLinear()
 
 function matchUp(data) {
 
+	var dullOpacity = 0.1;
+	var brightOpacity = 0.3;
+	var transitionDuration = 1000;
+
 	list = _.uniqBy(data, function (e) {
 		return e.Name;
 	});
@@ -560,11 +564,10 @@ function matchUp(data) {
 			height = 500 - margin.top - margin.bottom;
 
 	// set the ranges
-	var x_scatter = d3.scaleLinear().range([0,width]);
-	var y_scatter = d3.scaleLinear().range([height, 0]);
+	x_scatter = d3.scaleLinear().range([0,width]);
+	y_scatter = d3.scaleLinear().range([height, 0]);
 
-
-	var compare_picks_plot = d3.select("#compare-picks").append("svg")
+	compare_picks_plot = d3.select("#compare-picks").append("svg")
 	    .attr("width", width + margin.left + margin.right)
 	    .attr("height", height + margin.top + margin.bottom + 20)
 	  	.append("g")
@@ -621,10 +624,17 @@ function matchUp(data) {
 		  .attr("class", "dot")
 		  .attr("stroke","black")
 		  .attr("opacity",.7)
-		  .attr("r", 3.5)
+		  .attr("r", 5)
 		  .attr("cx", function(d) { return x_scatter(d.cand_1_pick); })
 		  .attr("cy", function(d) { return y_scatter(d.cand_2_pick); })
-		  .style("fill", function(d) { return color(d.diff); });		
+		  .style("fill", function(d) { return color(d.diff); })
+		  .on("mouseover", function(d) {		
+			showPickName(d)
+			console.log('helklo')
+			})					
+			.on("mouseout", function(d) {		
+				hidePickName(d)	
+			})		
 
 		compare_picks_plot.append("g")
 			.attr("transform", "translate(0," + height + ")")
@@ -653,6 +663,79 @@ function matchUp(data) {
 	      .text(cand2);
 	}
 	comparePicks(data,sel1,sel2)
+
+	function showPickName(d) {
+		var tooltipWidth = d.Name.length * 12;
+		
+		var tooltip = compare_picks_plot.append('g')
+		  .attr('class', 'tooltip');
+		
+		var tooltipRect = tooltip.append('rect')
+		  .attr('width', 0)
+		  .attr('height', 60)
+		  .attr('fill', 'black')
+		  .attr('rx', 3)
+		  .attr('ry', 3)
+		  .style('opacity', 0)
+		  .attr('x', x_scatter(d.cand_1_pick))
+		  .attr('y', y_scatter(d.cand_2_pick) - 30)
+		  .transition()
+		  .duration(transitionDuration/2)
+		  .style('opacity', 0.5)
+		  .attr('width', tooltipWidth)
+		  .attr('y', y_scatter(d.cand_2_pick) - 60);
+		
+		var tooltipName = tooltip.append('text')
+		  .attr('fill', 'white')
+		  .style('opacity', 0)
+		  .attr('x', x_scatter(d.cand_1_pick) + 5)
+		  .attr('y', y_scatter(d.cand_2_pick) - 20)
+		  .transition()
+		  .duration(transitionDuration/2)
+		  .style('opacity', 1)
+		  .attr('y', y_scatter(d.cand_2_pick) - 42)
+		  .text("Contestant: " + d.pick_name);
+
+		var tooltipScore = tooltip.append('text')
+		  .attr('fill', 'white')
+		  .style('opacity', 0)
+		  .attr('x', x_scatter(d.cand_1_pick) + 5)
+		  .attr('y', y_scatter(d.cand_2_pick) - 20)
+		  .transition()
+		  .duration(transitionDuration/2)
+		  .style('opacity', 1)
+		  .attr('y', y_scatter(d.cand_2_pick) - 28)
+		  .text(d.cand_1_name + " Ranking: " + d.cand_1_pick);
+
+		var tooltipStanding = tooltip.append('text')
+		  .attr('fill', 'white')
+		  .style('opacity', 0)
+		  .attr('x', x_scatter(d.cand_1_pick) + 5)
+		  .attr('y', y_scatter(d.cand_2_pick) - 20)
+		  .transition()
+		  .duration(transitionDuration/2)
+		  .style('opacity', 1)
+		  .attr('y', y_scatter(d.cand_2_pick) - 14)
+		  .text(d.cand_2_name + " Ranking: " + d.cand_2_pick);
+
+	}
+
+	function hidePickName(d) {
+		compare_picks_plot.selectAll('.tooltip text')
+		  .transition()
+		  .duration(transitionDuration/2)
+		  .style('opacity', 0);
+		compare_picks_plot.selectAll('.tooltip rect')
+		  .transition()
+		  .duration(transitionDuration/2)
+		  .style('opacity', 0)
+		  .attr('y', function() {
+		    return +d3.select(this).attr('y') + 40;
+		  })
+		  .attr('width', 0)
+		  .attr('height', 0);
+		compare_picks_plot.select('.tooltip').transition().delay(transitionDuration/2).remove();
+	}	
 }
 
 function rankingTable(data){
