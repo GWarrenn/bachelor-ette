@@ -20,6 +20,9 @@
 	th {
 		font-weight: bold;
 	}
+	td {
+		overflow: hidden;
+	}
 
 	.row:after {
 	  content: "";
@@ -32,6 +35,9 @@
 	  width: 50%;
 	  padding: 0px;
 	  font-family: Franklin Gothic Book
+	}
+	.scroll {
+		overflow: auto;
 	}
 
 </style>
@@ -53,8 +59,8 @@
 
 	<div class="row">
 		<div class="column" align='middle'>
-			<p text-align: center>Rankings Coming Soon</p>
-			<p text-align: center>Check Back After Tonight's Episode!</p>
+			<p align='center'><b>Standings</b></p>
+			<div id="ranking-table" align="center"></div>
 		</div>
 		<div class="column" align='center'>
 			<p align="center"> Select Name: <select align="center" id='nameDropdown'></select></p>
@@ -62,6 +68,14 @@
 			<div id="bach-picks-table" align="center"></div>
 		</div>  
 	</div>
+
+	<h3 align="center">Compare your rankings with others!</h3>
+
+	<div id='container' align="center">
+		<p id='selector'> Compare <select align="center" id='first_contender'></select> and <select align="center" id='second_contender'></select></p>
+		<p id="matchups"> <div id=result_text></div> </p>
+	</div>
+	<div align="center" id="compare-picks"></div>
 
 	<!-- Commenting out rankings visualization until we actuall have the data
 	<p class="loading">Loading...</p>

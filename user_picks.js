@@ -59,6 +59,10 @@ function draw(data, tabletop) {
 	rankings_over_time = tabletop.sheets("weekly rankings")
 	ranking_data = rankings_over_time.elements
 
+	matchUp(long_data)
+
+	rankingTable(ranking_data)
+
 	//var chartEl = document.querySelector('#chart');
 	//var rect = chartEl.getBoundingClientRect();
 	//document.querySelector('.loading').style.display = 'none';
@@ -133,6 +137,9 @@ function UserPicks(data) {
 		d3.select("#bach-picks-table tbody").remove();
 		d3.select("#bach-picks-table thead").remove();
 
+		data.forEach(function(d) {
+			d.eliminated_fmt = d.eliminated == 1 ? "Eliminated" : "Remaining";
+		});
 
 		var table = d3.select('#bach-picks-table')
 			.append('table')
@@ -140,12 +147,12 @@ function UserPicks(data) {
 		var thead = table.append('thead')
 		var	tbody = table.append('tbody');
 
-		merged_data = _.orderBy(merged_data, ['pick_rank'], ['asc']);
+		data = _.orderBy(data, ['pick_rank'], ['asc']);
 
-		display_cols = ['Contestant Name','Contestant Rank','Avg. Contestant Rank']
-		columns = ['pick_name','pick_rank','adjusted_rank']
+		display_cols = ['Contestant Name','Contestant Rank','Avg. Contestant Rank','Status']
+		columns = ['pick_name','pick_rank','adjusted_rank','eliminated_fmt']
 
-		filtered_data = merged_data.filter(function (a) { return a.Name == filter_param ; });		
+		filtered_data = data.filter(function (a) { return a.Name == filter_param ; });		
 
 		//// append the header row
 		thead.append('tr')
@@ -473,3 +480,249 @@ function drawChart(data, width, height) {
 	}		
 }
 
+var color = d3.scaleLinear()
+				.domain([-30,30])
+				.range(["#2dc42b","#90ff8e"]);
+
+function matchUp(data) {
+
+	list = _.uniqBy(data, function (e) {
+		return e.Name;
+	});
+
+	var names = _.map(list, 'Name');
+
+	var sel1 = names[Math.floor(Math.random()*names.length)];
+
+	names = names.sort(function(x,y){ return x == sel1 ? -1 : y == sel1 ? 1 : 0; });
+
+	var first_contender = d3.select('#first_contender')
+
+	first_contender
+		.selectAll("option")
+		.data(names)
+		.enter()
+		.append("option")
+			.attr("value", function (d) { return d; })
+			.text(function (d) {
+				return d[0].toUpperCase() + d.slice(1,d.length);
+			})
+
+	first_contender.on('change',function() {
+		sel1 = d3.select(this)
+			.property('value');
+		comparePicks(data,sel1,sel2)
+
+	})
+
+	Array.prototype.remove = function() {
+		var what, a = arguments, L = a.length, ax;
+			while (L && this.length) {
+				what = a[--L];
+			while ((ax = this.indexOf(what)) !== -1) {
+			this.splice(ax, 1);
+			}
+		}
+		return this;
+	};
+
+	var new_names = names.remove(first_contender)
+
+	var sel2 = new_names[Math.floor(Math.random()*new_names.length)];
+
+	new_names = new_names.sort(function(x,y){ return x == sel2 ? -1 : y == sel2 ? 1 : 0; });
+
+	var second_contender = d3.select('#second_contender')
+
+	second_contender
+		.selectAll("option")
+		.data(new_names)
+		.enter()
+		.append("option")
+			.attr("value", function (d) { return d; })
+			.text(function (d) {
+				return d[0].toUpperCase() + d.slice(1,d.length);
+			})
+
+	second_contender.on('change',function() {
+		sel2 = d3.select(this)
+			.property('value');
+		
+		comparePicks(data,sel1,sel2)
+	})
+
+	var comparePicks = function(data,cand1,cand2) {
+
+		d3.select("#compare-picks svg").remove()
+
+		var margin = {top: 20, right: 20, bottom: 30, left: 50},
+			width = 500 - margin.left - margin.right,
+			height = 500 - margin.top - margin.bottom;
+
+	// set the ranges
+	var x_scatter = d3.scaleLinear().range([0,width]);
+	var y_scatter = d3.scaleLinear().range([height, 0]);
+
+
+	var compare_picks_plot = d3.select("#compare-picks").append("svg")
+	    .attr("width", width + margin.left + margin.right)
+	    .attr("height", height + margin.top + margin.bottom + 20)
+	  	.append("g")
+	    .attr("transform",
+	          "translate(" + margin.left + "," + margin.top + ")");
+
+		cand1_data = data.filter(function (a) {
+			return a.Name == cand1 ;
+		});
+
+		cand1_data = _.map(cand1_data, item => {
+				let newItem = _.clone(item);
+				newItem.cand_1_pick = newItem.pick_rank
+				newItem.cand_1_name = newItem.Name
+
+				return newItem;
+		});
+
+		cand1 = cand1_data[0].cand_1_name
+
+		cand2_data = data.filter(function (a) {
+			return a.Name == cand2 ;
+		});
+
+		cand2_data = _.map(cand2_data, item => {
+				let newItem = _.clone(item);
+				newItem.cand_2_pick = newItem.pick_rank
+				newItem.cand_2_name = newItem.Name
+				return newItem;
+		});
+
+		cand2_name = cand2_data[0].cand_2_pick
+
+		comb = _.map(cand1_data, function(obj) {
+					return _.assign(obj, _.find(cand2_data, {
+						pick_name: obj.pick_name
+					}));
+				});
+
+	 	comb.forEach(function(d,i) {
+		
+			d.cand_1_pick = +d.cand_1_pick
+			d.cand_2_pick = +d.cand_2_pick
+			d.diff = d.cand_1_pick - d.cand_2_pick
+
+		});
+
+		x_scatter.domain(d3.extent(comb, function(d) { return d.cand_1_pick; })).nice();
+		y_scatter.domain(d3.extent(comb, function(d) { return d.cand_2_pick; })).nice();
+
+		compare_picks_plot.selectAll(".dot")
+		  .data(comb)
+		.enter().append("circle")
+		  .attr("class", "dot")
+		  .attr("stroke","black")
+		  .attr("opacity",.7)
+		  .attr("r", 3.5)
+		  .attr("cx", function(d) { return x_scatter(d.cand_1_pick); })
+		  .attr("cy", function(d) { return y_scatter(d.cand_2_pick); })
+		  .style("fill", function(d) { return color(d.diff); });		
+
+		compare_picks_plot.append("g")
+			.attr("transform", "translate(0," + height + ")")
+			.call(d3.axisBottom(x_scatter));
+
+	  	// text label for the x axis
+	  	compare_picks_plot.append("text")  
+	      .attr("transform",
+	            "translate(" + (width/2) + " ," + 
+	                           (height + margin.top + 10) + ")")
+	      .style("text-anchor", "middle")
+	      .style("font", "12px arial")      
+	      .text(cand1);
+
+		compare_picks_plot.append("g")
+			.call(d3.axisLeft(y_scatter));	  
+
+	  	// text label for the y axis
+	  	compare_picks_plot.append("text")
+	      .attr("transform", "rotate(-90)")
+	      .attr("y", 0 - margin.left)
+	      .attr("x",0 - (height / 2))
+	      .attr("dy", "1em")
+	      .style("text-anchor", "middle")
+	      .style("font", "12px arial")      
+	      .text(cand2);
+	}
+	comparePicks(data,sel1,sel2)
+}
+
+function rankingTable(data){
+
+		// format the data
+		data.forEach(function(d) {
+			d.standing = +d.standing
+			d.Score = +d.Score
+			d.week = d.week
+			//d.Correct_fmt = +d.Correct_fmt
+		});
+
+		weeks = d3.map(data, function(d) { return d.week; }).keys().map(function(d) { return Number(d); });	
+		this_week = Math.max(...weeks)
+		most_recent_week_ranking = data.filter(function(d) { return d.week == this_week })
+
+		d3.select("#ranking-table tbody").remove();
+		d3.select("#ranking-table thead").remove();
+
+		var table = d3.select('#ranking-table')
+			.append('table')
+
+		var thead = table.append('thead')
+		var	tbody = table.append('tbody');
+
+		data = _.orderBy(most_recent_week_ranking, ['standing'], ['asc']);
+
+		display_cols = ['Name','Score','Rank']
+		columns = ['Name','Score','standing']
+
+		//// append the header row
+		thead.append('tr')
+		  .selectAll('th')
+		  .data(display_cols).enter()
+		  .append('th')
+			.text(function (column) { return column; });
+
+		// create a row for each object in the data
+		var rows = tbody.selectAll('tr')
+		  .data(data)
+		  .enter()
+		  .append('tr');
+
+		rows.exit().remove();
+
+		min = _.minBy(data, function(o) {
+				return o.Score_fmt;
+		})
+
+		max = _.maxBy(data, function(o) {
+				return o.Score_fmt;
+		})
+
+		color = d3.scaleLinear()
+		    .domain([1,-.5])
+		    .range(["#ff4500","#ffffff"]);
+
+		back_to_number = d3.format(".4r")
+
+		// create a cell in each row for each column
+		cells = rows.selectAll('td')
+			.data(function (row) {
+				return columns.map(function (column) {
+					return {column: column, value: row[column]};
+				});
+			})
+			.enter()
+			.append('td')
+			.style("background-color", function(d){ if(d.column == "Score") return color(+d.value);})
+			.text(function (d) { return d.value; });
+
+		cells.exit().remove();	
+}
