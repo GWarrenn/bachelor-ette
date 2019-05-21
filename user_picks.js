@@ -7,10 +7,21 @@ function renderSpreadsheetData() {
 }
 
 function draw(data, tabletop) {
-	console
+
+	///////////////////////////////////////
+	//
+	// load pick data
+	//
+	///////////////////////////////////////
 
 	results = tabletop.sheets("picks")
 	main_data = results.elements
+
+	///////////////////////////////////////
+	//
+	// load weekly results -- rose order
+	//
+	///////////////////////////////////////
 
 	weekly_results = tabletop.sheets("weekly results")
 	rose_order = weekly_results.elements
@@ -56,20 +67,43 @@ function draw(data, tabletop) {
 
 	UserPicks(roses_and_picks)
 
-	rankings_over_time = tabletop.sheets("weekly rankings")
-	ranking_data = rankings_over_time.elements
+	matchUp(long_data)	
 
-	matchUp(long_data)
+	///////////////////////////////////////
+	//
+	// load weekly rankings -- for trend chart
+	//
+	///////////////////////////////////////	
 
-	rankingTable(ranking_data)
+	spaghetti = tabletop.sheets("weekly rankings")
+	spaghetti_data = spaghetti.elements
 
 	//var chartEl = document.querySelector('#chart');
 	//var rect = chartEl.getBoundingClientRect();
 	//document.querySelector('.loading').style.display = 'none';
-	//drawChart(ranking_data, rect.width, rect.height);	
+	//drawChart(spaghetti_data, rect.width, rect.height);	
+
+	///////////////////////////////////////
+	//
+	// load weekly rankings -- for table
+	//
+	///////////////////////////////////////
+
+	rankings_over_time = tabletop.sheets("weekly rankings")
+	ranking_data = rankings_over_time.elements
+
+	rankingTable(ranking_data)
+
 }
 
 renderSpreadsheetData();
+
+///////////////////////////////////////
+//
+// these are the men
+//
+///////////////////////////////////////
+
 
 contestants = ["Brian","Cam","Chasen","Connor J.","Connor S.","Daron","Devin","Dustin","Dylan","Garrett","Grant",
 				"Hunter","Jed","Joe","Joey J.","John Paul Jones","Jonathan","Kevin","Luke P.","Luke S.","Matt Donald",
@@ -138,7 +172,7 @@ function UserPicks(data) {
 		d3.select("#bach-picks-table thead").remove();
 
 		data.forEach(function(d) {
-			d.eliminated_fmt = d.eliminated == 1 ? "Eliminated" : "Remaining";
+			d.eliminated_fmt = d.eliminated == 1 ? d.rose_order : d.rose_order + " (RO)";
 		});
 
 		var table = d3.select('#bach-picks-table')
@@ -149,7 +183,7 @@ function UserPicks(data) {
 
 		data = _.orderBy(data, ['pick_rank'], ['asc']);
 
-		display_cols = ['Contestant Name','Contestant Rank','Avg. Contestant Rank','Status']
+		display_cols = ['Contestant Name','Contestant Rank','Avg. Contestant Rank','Final Rose Order¹']
 		columns = ['pick_name','pick_rank','adjusted_rank','eliminated_fmt']
 
 		filtered_data = data.filter(function (a) { return a.Name == filter_param ; });		
@@ -171,7 +205,7 @@ function UserPicks(data) {
 
 		eliminated = filtered_data.filter(function (a) { return a.eliminated == "1" ; });		
 
-		var color = d3.scaleOrdinal()
+		color = d3.scaleOrdinal()
 		    .domain(eliminated)
 		    .range("#FF0000", "#FF0000");
 
@@ -184,7 +218,7 @@ function UserPicks(data) {
 			})
 			.enter()
 			.append('td')
-			.style("background-color", function(d){ if(d.column == "pick_name") return color(d.value);})
+			.style("background-color", function(d){ if(d.column == "pick_name") return color(+d.value);})
 			.text(function (d) { return d.value; });
 
 		cells.exit().remove();
@@ -195,10 +229,9 @@ function UserPicks(data) {
 
 	updateTable(merged_data,temp_filter)
 
-	console.log(avg_ranks)
 }
 
-function drawChart(data, width, height) {
+function drawChart(chart_data, width, height) {
 
 	var dullOpacity = 0.1;
 	var brightOpacity = 0.3;
@@ -218,27 +251,41 @@ function drawChart(data, width, height) {
 		.attr('width', width)
 		.attr('height', height);
 
-	temp_data = data
+	const weeks_all = [...new Set(chart_data.map(item => item.week))];	
+	//weeks = d3.map(chart_data, function(d) { return d.week; }).keys().map(function(d) { return Number(d); });	
 
-	weeks = d3.map(temp_data, function(d) { return d.week; }).keys().map(function(d) { return Number(d); });	
-	teams = temp_data.map(function(d) { return d.Name});
+	function bouncer(arr) {
+	var notAllowed = ["",false,null,0,undefined,NaN];
+	  for (i = 0; i < arr.length; i++){
+	      for (j=0; j<notAllowed.length;j++) {
+	         arr = arr.filter(function(val) {
+	               return val !== notAllowed[j];
+	              });
+	  }
+	 }
+	return arr;
+	}
+
+	const weeks = bouncer(weeks_all)
+
+	teams = chart_data.map(function(d) { return d.Name});
 
 	most_recent_week = Math.max(...weeks)
-	most_recent_week_result = temp_data.filter(function(d) { return d.week == most_recent_week })
+	most_recent_week_result = chart_data.filter(function(d) { return d.week == most_recent_week })
 	current_leader = most_recent_week_result[0].Name
 
-	prev_week = most_recent_week - 1
-	prev_week_data = temp_data.filter(function(d) { return d.week == prev_week })
+	//prev_week = most_recent_week - 1
+	//prev_week_data = chart_data.filter(function(d) { return d.week == prev_week })
 
 	//prev_week_data = prev_week_data.map(function(a) {
 	//	a.prev_week_standing = a.standing;
 	//	a.prev_week = a.week;
 	//});	
 
-	change = _(prev_week_data) // start sequence
-		.keyBy('Name') // create a dictionary of the 1st array
-		.mergeWith(_.keyBy(most_recent_week_result, 'Name')) // create a dictionary of the 2nd array, and merge it to the 1st
-		.values() // turn the combined dictionary to array
+	//change = _(prev_week_data) // start sequence
+	//	.keyBy('Name') // create a dictionary of the 1st array
+	//	.mergeWith(_.keyBy(most_recent_week_result, 'Name')) // create a dictionary of the 2nd array, and merge it to the 1st
+	//	.values() // turn the combined dictionary to array
 		//.value() 
 
 	//change_in_time = _.map(prev_week_data, function(obj) {
@@ -247,8 +294,6 @@ function drawChart(data, width, height) {
 	//					}));
 	//				});
 
-	console.log(data)
-
 	document.getElementById("current_leader").innerHTML = "Current Leader (as of week " + most_recent_week + ")" + ": <b>" + current_leader + "</b>"
 
 	// week
@@ -256,7 +301,7 @@ function drawChart(data, width, height) {
 		.range([margin.left , width - margin.right])
 		.domain([1,9]);
 
-	num_rows = data.filter(function(d) { return d.week == "1" }).length	
+	num_rows = chart_data.filter(function(d) { return d.week == "1" }).length	
 
 	// position
 	var y = d3.scaleLinear()
@@ -314,7 +359,7 @@ function drawChart(data, width, height) {
 		.call(yAxisRight)
 
 	chart.selectAll(".text")
-		.data(data)
+		.data(chart_data)
 		.enter()
 		.filter(function(d) {
 			return d.week == most_recent_week
@@ -370,7 +415,7 @@ function drawChart(data, width, height) {
 		.x(function(d) { return x(d.week); })
 		.y(function(d) { return y(d.standing); });	
 
-	data.forEach(function(d) {
+	chart_data.forEach(function(d) {
 		d.standing = +d.standing;
 		d.week = d.week;
 	});
@@ -379,7 +424,7 @@ function drawChart(data, width, height) {
 		.key(function(d){
 			return d.Name;
 		})
-		.entries(data)
+		.entries(chart_data)
 
 	chart.selectAll(".line")
 		.data(nest)
@@ -392,7 +437,7 @@ function drawChart(data, width, height) {
 			});	
 
 	chart.selectAll(".dot")
-        .data(data)
+        .data(chart_data)
         .enter()
         .append("circle")
         .attr("class", "dot")
@@ -480,10 +525,6 @@ function drawChart(data, width, height) {
 	}		
 }
 
-var color = d3.scaleLinear()
-				.domain([-30,30])
-				.range(["#2dc42b","#90ff8e"]);
-
 function matchUp(data) {
 
 	var dullOpacity = 0.1;
@@ -557,111 +598,115 @@ function matchUp(data) {
 
 	var comparePicks = function(data,cand1,cand2) {
 
+		var colorScatter = d3.scaleLinear()
+			.domain([-30,30])
+			.range(["#FF3232","#90ff8e"]);
+
 		d3.select("#compare-picks svg").remove()
 
 		var margin = {top: 20, right: 20, bottom: 30, left: 50},
 			width = 500 - margin.left - margin.right,
 			height = 500 - margin.top - margin.bottom;
 
-	// set the ranges
-	x_scatter = d3.scaleLinear().range([0,width]);
-	y_scatter = d3.scaleLinear().range([height, 0]);
+		// set the ranges
+		x_scatter = d3.scaleLinear().range([0,width]);
+		y_scatter = d3.scaleLinear().range([height, 0]);
 
-	compare_picks_plot = d3.select("#compare-picks").append("svg")
-	    .attr("width", width + margin.left + margin.right)
-	    .attr("height", height + margin.top + margin.bottom + 20)
-	  	.append("g")
-	    .attr("transform",
-	          "translate(" + margin.left + "," + margin.top + ")");
+		compare_picks_plot = d3.select("#compare-picks").append("svg")
+		    .attr("width", width + margin.left + margin.right)
+		    .attr("height", height + margin.top + margin.bottom + 20)
+		  	.append("g")
+		    .attr("transform",
+		          "translate(" + margin.left + "," + margin.top + ")");
 
-		cand1_data = data.filter(function (a) {
-			return a.Name == cand1 ;
-		});
+			cand1_data = data.filter(function (a) {
+				return a.Name == cand1 ;
+			});
 
-		cand1_data = _.map(cand1_data, item => {
-				let newItem = _.clone(item);
-				newItem.cand_1_pick = newItem.pick_rank
-				newItem.cand_1_name = newItem.Name
+			cand1_data = _.map(cand1_data, item => {
+					let newItem = _.clone(item);
+					newItem.cand_1_pick = newItem.pick_rank
+					newItem.cand_1_name = newItem.Name
 
-				return newItem;
-		});
+					return newItem;
+			});
 
-		cand1 = cand1_data[0].cand_1_name
+			cand1 = cand1_data[0].cand_1_name
 
-		cand2_data = data.filter(function (a) {
-			return a.Name == cand2 ;
-		});
+			cand2_data = data.filter(function (a) {
+				return a.Name == cand2 ;
+			});
 
-		cand2_data = _.map(cand2_data, item => {
-				let newItem = _.clone(item);
-				newItem.cand_2_pick = newItem.pick_rank
-				newItem.cand_2_name = newItem.Name
-				return newItem;
-		});
+			cand2_data = _.map(cand2_data, item => {
+					let newItem = _.clone(item);
+					newItem.cand_2_pick = newItem.pick_rank
+					newItem.cand_2_name = newItem.Name
+					return newItem;
+			});
 
-		cand2_name = cand2_data[0].cand_2_pick
+			cand2_name = cand2_data[0].cand_2_pick
 
-		comb = _.map(cand1_data, function(obj) {
-					return _.assign(obj, _.find(cand2_data, {
-						pick_name: obj.pick_name
-					}));
-				});
+			comb = _.map(cand1_data, function(obj) {
+						return _.assign(obj, _.find(cand2_data, {
+							pick_name: obj.pick_name
+						}));
+					});
 
-	 	comb.forEach(function(d,i) {
-		
-			d.cand_1_pick = +d.cand_1_pick
-			d.cand_2_pick = +d.cand_2_pick
-			d.diff = d.cand_1_pick - d.cand_2_pick
+		 	comb.forEach(function(d,i) {
+			
+				d.cand_1_pick = +d.cand_1_pick
+				d.cand_2_pick = +d.cand_2_pick
+				d.diff = d.cand_1_pick - d.cand_2_pick
 
-		});
+			});
 
-		x_scatter.domain(d3.extent(comb, function(d) { return d.cand_1_pick; })).nice();
-		y_scatter.domain(d3.extent(comb, function(d) { return d.cand_2_pick; })).nice();
+			x_scatter.domain(d3.extent(comb, function(d) { return d.cand_1_pick; })).nice();
+			y_scatter.domain(d3.extent(comb, function(d) { return d.cand_2_pick; })).nice();
 
-		compare_picks_plot.selectAll(".dot")
-		  .data(comb)
-		.enter().append("circle")
-		  .attr("class", "dot")
-		  .attr("stroke","black")
-		  .attr("opacity",.7)
-		  .attr("r", 5)
-		  .attr("cx", function(d) { return x_scatter(d.cand_1_pick); })
-		  .attr("cy", function(d) { return y_scatter(d.cand_2_pick); })
-		  .style("fill", function(d) { return color(d.diff); })
-		  .on("mouseover", function(d) {		
-			showPickName(d)
-			console.log('helklo')
-			})					
-			.on("mouseout", function(d) {		
-				hidePickName(d)	
-			})		
+			compare_picks_plot.selectAll(".dot")
+			  .data(comb)
+			.enter().append("circle")
+			  .attr("class", "dot")
+			  .attr("stroke","black")
+			  .attr("opacity",.7)
+			  .attr("r", 5)
+			  .attr("cx", function(d) { return x_scatter(d.cand_1_pick); })
+			  .attr("cy", function(d) { return y_scatter(d.cand_2_pick); })
+			  .style("fill", function(d) { return colorScatter(d.diff); })
+			  .on("mouseover", function(d) {		
+				showPickName(d)
+				})					
+				.on("mouseout", function(d) {		
+					hidePickName(d)	
+				})		
 
-		compare_picks_plot.append("g")
-			.attr("transform", "translate(0," + height + ")")
-			.call(d3.axisBottom(x_scatter));
+			compare_picks_plot.append("g")
+				.attr("transform", "translate(0," + height + ")")
+				.call(d3.axisBottom(x_scatter));
 
-	  	// text label for the x axis
-	  	compare_picks_plot.append("text")  
-	      .attr("transform",
-	            "translate(" + (width/2) + " ," + 
-	                           (height + margin.top + 10) + ")")
-	      .style("text-anchor", "middle")
-	      .style("font", "12px arial")      
-	      .text(cand1);
+		  	// text label for the x axis
+		  	compare_picks_plot.append("text")  
+		      .attr("transform",
+		            "translate(" + (width/2) + " ," + 
+		                           (height + margin.top + 10) + ")")
+		      .style("text-anchor", "middle")
+		      .style("font", "12px arial")      
+		      .text(cand1);
 
-		compare_picks_plot.append("g")
-			.call(d3.axisLeft(y_scatter));	  
+			compare_picks_plot.append("g")
+				.call(d3.axisLeft(y_scatter));	  
 
-	  	// text label for the y axis
-	  	compare_picks_plot.append("text")
-	      .attr("transform", "rotate(-90)")
-	      .attr("y", 0 - margin.left)
-	      .attr("x",0 - (height / 2))
-	      .attr("dy", "1em")
-	      .style("text-anchor", "middle")
-	      .style("font", "12px arial")      
-	      .text(cand2);
+		  	// text label for the y axis
+		  	compare_picks_plot.append("text")
+		      .attr("transform", "rotate(-90)")
+		      .attr("y", 0 - margin.left)
+		      .attr("x",0 - (height / 2))
+		      .attr("dy", "1em")
+		      .style("text-anchor", "middle")
+		      .style("font", "12px arial")      
+		      .text(cand2);
 	}
+
 	comparePicks(data,sel1,sel2)
 
 	function showPickName(d) {
@@ -738,19 +783,54 @@ function matchUp(data) {
 	}	
 }
 
-function rankingTable(data){
+function rankingTable(tabledata){
+
+		rank_data = Object.create(tabledata);
 
 		// format the data
-		data.forEach(function(d) {
+		rank_data.forEach(function(d) {
 			d.standing = +d.standing
 			d.Score = +d.Score
 			d.week = d.week
 			//d.Correct_fmt = +d.Correct_fmt
 		});
 
-		weeks = d3.map(data, function(d) { return d.week; }).keys().map(function(d) { return Number(d); });	
-		this_week = Math.max(...weeks)
-		most_recent_week_ranking = data.filter(function(d) { return d.week == this_week })
+		var weeks = [...new Set(rank_data.map(item => item.week))];	
+
+		var this_week = Math.max(...weeks)
+
+		var current_week_ranks = rank_data.filter(function(d) { return d.week == this_week })
+		var previous_week_ranks = rank_data.filter(function(d) { return d.week == this_week - 1 })
+
+		previous_week_ranks.forEach(function(d) {
+			d.prev_Score = +d.Score
+			d.prev_rank = +d.standing
+
+		});
+
+		Object.keys(previous_week_ranks).forEach(o => {
+			previous_week_ranks.forEach(p => 
+				delete p['Score']
+			)
+			previous_week_ranks.forEach(p => 
+				delete p['week']
+			)
+			previous_week_ranks.forEach(p => 
+				delete p['standing']
+			)						
+		});
+
+		current_week_ranks = _.map(current_week_ranks, function(obj) {
+			return _.assign(obj, _.find(previous_week_ranks, {
+				Name : obj.Name
+			}));
+		});		
+
+		current_week_ranks.forEach(function(d) {
+			d.change_score = Math.round((+d.Score - +d.prev_Score)*100) / 100
+			d.change_standing = +d.prev_rank - +d.standing
+
+		});
 
 		d3.select("#ranking-table tbody").remove();
 		d3.select("#ranking-table thead").remove();
@@ -761,10 +841,10 @@ function rankingTable(data){
 		var thead = table.append('thead')
 		var	tbody = table.append('tbody');
 
-		data = _.orderBy(most_recent_week_ranking, ['standing'], ['asc']);
+		rank_data = _.orderBy(current_week_ranks, ['standing'], ['asc']);
 
-		display_cols = ['Name','Score','Rank']
-		columns = ['Name','Score','standing']
+		display_cols = ['Name','Score','Score Change Since Last Week','Rank Change Since Last Week','Rank']
+		columns = ['Name','Score','change_score','change_standing','standing']
 
 		//// append the header row
 		thead.append('tr')
@@ -775,23 +855,43 @@ function rankingTable(data){
 
 		// create a row for each object in the data
 		var rows = tbody.selectAll('tr')
-		  .data(data)
+		  .data(rank_data)
 		  .enter()
 		  .append('tr');
 
 		rows.exit().remove();
 
-		min = _.minBy(data, function(o) {
-				return o.Score_fmt;
+		min = _.minBy(rank_data, function(o) {
+				return o.change_score;
 		})
+		min_change = min["change_score"]
+		min_change2 = min["change_standing"]
 
-		max = _.maxBy(data, function(o) {
-				return o.Score_fmt;
+		max = _.maxBy(rank_data, function(o) {
+				return o.change_score;
 		})
+		max_change = max["change_score"]
+		max_change2 = max["change_standing"]
 
 		color = d3.scaleLinear()
 		    .domain([1,-.5])
 		    .range(["#ff4500","#ffffff"]);
+
+		score_change = d3.scaleLinear()
+			.domain([min_change,max_change])
+			.range(["#FFA07A","#c6efce"]);    
+
+		rank_change = d3.scaleLinear()
+			.domain([min_change2,max_change2])
+			.range(["#FFA07A","#c6efce"]);    
+
+		var sequentialScale = d3.scaleSequential()
+			.domain([min_change,max_change])
+			.interpolator(d3.interpolatePiYG);		
+
+		var sequentialScale2 = d3.scaleSequential()
+			.domain([min_change2,max_change2])
+			.interpolator(d3.interpolatePiYG);			
 
 		back_to_number = d3.format(".4r")
 
@@ -804,7 +904,10 @@ function rankingTable(data){
 			})
 			.enter()
 			.append('td')
-			.style("background-color", function(d){ if(d.column == "Score") return color(+d.value);})
+			.style("background-color", function(d){ if(d.column == "Score") return color(+d.value); return d.value})
+			.style("background-color", function(d){ if(d.column == "change_score") return sequentialScale(+d.value); return d.value})
+			.style("background-color", function(d){ if(d.column == "change_standing") return sequentialScale2(+d.value); return d.value})
+
 			.text(function (d) { return d.value; });
 
 		cells.exit().remove();	

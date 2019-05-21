@@ -52,11 +52,13 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tabletop.js/1.4.3/tabletop.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.10/lodash.min.js"></script>
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+
 
 </head>
 	<body>
 
-	<h1 align="center"> Bachelorette 2019 Standings</h1>
+	<h1 align="center">🌹 Bachelorette 2019 Standings 🌹</h1>
 	<p align="center">This page contains the current standings for Hannah B's season of the Bachelorette, as well
 	as other visualizations and metrics. 
 	Please make sure to check back in after each episode airs to check how your predictions have changed 
@@ -71,6 +73,7 @@
 			<p align="center"> Select Name: <select align="center" id='nameDropdown'></select></p>
 			<div id='name' align="center"></div>
 			<div id="bach-picks-table" align="center"></div>
+			<p style="font-size:10px"><b><sup>1</sup>(RO) indicates that contestants’ position is not final; their position is noted by the order in which they received a rose in the most recent episode</b></p>
 		</div>  
 	</div>
 
@@ -85,7 +88,7 @@
 	<!-- Commenting out rankings visualization until we actuall have the data
 	<p class="loading">Loading...</p>
 	<div id='current_leader' align="center"></div>
-	<svg id="chart"></svg>
+	<div align="center"><svg id="chart"></svg></div>
 	<p style="font-size:12px">Last updated: <span id="datetime"></span></p>-->
 
 	<script type="text/javascript" src="user_picks.js"></script>
