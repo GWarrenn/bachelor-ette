@@ -830,6 +830,7 @@ function rankingTable(tabledata){
 			d.change_score = Math.round((+d.Score - +d.prev_Score)*100) / 100
 			d.change_standing = +d.prev_rank - +d.standing
 
+			d.change_standing = d.change_standing > 0 ? "+" + d.change_standing : d.change_standing ;
 		});
 
 		d3.select("#ranking-table tbody").remove();
@@ -905,7 +906,6 @@ function rankingTable(tabledata){
 			.enter()
 			.append('td')
 			.style("background-color", function(d){ if(d.column == "Score") return color(+d.value); return d.value})
-			.style("background-color", function(d){ if(d.column == "change_score") return sequentialScale(+d.value); return d.value})
 			.style("background-color", function(d){ if(d.column == "change_standing") return sequentialScale2(+d.value); return d.value})
 
 			.text(function (d) { return d.value; });
