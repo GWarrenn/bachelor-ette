@@ -843,8 +843,8 @@ function rankingTable(tabledata){
 
 		rank_data = _.orderBy(current_week_ranks, ['standing'], ['asc']);
 
-		display_cols = ['Name','Score','Score Change Since Last Week','Rank Change Since Last Week','Rank']
-		columns = ['Name','Score','change_score','change_standing','standing']
+		display_cols = ['Name','Score','Rank','Rank Change Since Last Week']
+		columns = ['Name','Score','standing','change_standing']
 
 		//// append the header row
 		thead.append('tr')
